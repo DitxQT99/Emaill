@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TempMail MAX PRO</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:radial-gradient(circle at top,#0f0c29,#302b63,#24243e);
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card{
+  width:420px;
+  padding:25px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(20px);
+  box-shadow:0 0 40px #00fff7;
+  animation:glow 3s infinite alternate;
+}
+
+@keyframes glow{
+  from{box-shadow:0 0 20px #00fff7;}
+  to{box-shadow:0 0 60px #00fff7;}
+}
+
+input{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  margin-bottom:10px;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  margin-top:5px;
+  background:#00fff7;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.mail{
+  background:rgba(255,255,255,0.1);
+  padding:10px;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+.attach{
+  font-size:12px;
+  margin-top:5px;
+  display:block;
+  color:#00fff7;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>⚡ TempMail MAX PRO</h2>
+
+  <input id="emailInput" readonly />
+
+  <button onclick="generateEmail()">Generate Random Email</button>
+  <button onclick="copyEmail()">Copy Email</button>
+
+  <div id="messages"></div>
+</div>
+
+<script>
+let currentEmail = localStorage.getItem("tempEmail") || "";
+const input = document.getElementById("emailInput");
+
+if(currentEmail){
+  input.value = currentEmail;
+  fetchMessages();
+}
+
+// RANDOM EMAIL
+function generateEmail(){
+  const random = Math.random().toString(36).substring(2,10);
+  const email = random + "@temp-mail.io";
+  currentEmail = email;
+  input.value = email;
+  localStorage.setItem("tempEmail", email);
+  fetchMessages();
+}
+
+// COPY
+function copyEmail(){
+  navigator.clipboard.writeText(currentEmail);
+  alert("Email copied!");
+}
+
+// FETCH MESSAGES
+async function fetchMessages(){
+  if(!currentEmail) return;
+
+  const res = await fetch(`/api/api?email=${currentEmail}`);
+  const data = await res.json();
+
+  const box = document.getElementById("messages");
+  box.innerHTML = "";
+
+  if(data.error){
+    box.innerHTML = "<p>No messages</p>";
+    return;
+  }
+
+  if(!data.length){
+    box.innerHTML = "<p>No messages yet...</p>";
+    return;
+  }
+
+  data.forEach(msg=>{
+    let attachmentsHTML = "";
+    if(msg.attachments && msg.attachments.length){
+      msg.attachments.forEach(att=>{
+        attachmentsHTML += `
+          <a class="attach" href="/api/api?download=${att.id}&email=${currentEmail}" target="_blank">
+          📎 Download ${att.name} (${att.size} bytes)
+          </a>
+        `;
+      });
+    }
+
+    box.innerHTML += `
+      <div class="mail">
+        <b>From:</b> ${msg.from}<br>
+        <b>Subject:</b> ${msg.subject}<br>
+        <small>${msg.created_at}</small>
+        ${attachmentsHTML}
+      </div>
+    `;
+  });
+}
+
+// AUTO REFRESH 5 DETIK
+setInterval(fetchMessages, 5000);
+</script>
+
+</body>
+</html>
